@@ -12,6 +12,8 @@ vim.o.updatetime = 250
 vim.o.ttimeoutlen = 0
 vim.o.shell = '/bin/bash -i'
 
+vim.o.completeopt = 'menuone,noselect'
+
 
 -- Set highlight on search
 vim.o.hlsearch = false
@@ -84,6 +86,9 @@ packer.startup(function(use)
   -- Parsing library
   use 'nvim-treesitter/nvim-treesitter'
 
+  -- Autopairs
+  use 'LunarWatcher/auto-pairs'
+
   -- Language server protocol: ide-like behavior
   use 'neovim/nvim-lspconfig'
   use 'williamboman/nvim-lsp-installer'
@@ -100,8 +105,8 @@ packer.startup(function(use)
   -- Heuristically set shiftwidth / expandtab parameters for buffer
   use 'tpope/vim-sleuth'
 
-  -- Autocomplete
-  use { 'hrsh7th/nvim-cmp', requires = { 'hrsh7th/cmp-nvim-lsp' } }
+  -- git integration
+  use 'tpope/vim-fugitive'
 
   -- Search
   use {
@@ -111,9 +116,25 @@ packer.startup(function(use)
       {
         'nvim-telescope/telescope-fzf-native.nvim',
         run = 'make',
-      }
+      },
+      'BurntSushi/ripgrep'
     }
   }
+
+  use {
+    'hrsh7th/nvim-cmp',
+    requires = {
+      'hrsh7th/cmp-nvim-lsp',
+      'hrsh7th/cmp-nvim-lua',
+      'hrsh7th/cmp-buffer',
+      'hrsh7th/cmp-path',
+      'hrsh7th/cmp-emoji',
+      'dcampos/nvim-snippy',
+      'dcampos/cmp-snippy',
+    },
+  }
+
+  use 'hrsh7th/cmp-nvim-lsp-signature-help'
 
   -- Statusline
   use {
@@ -152,8 +173,6 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 vim.o.termguicolors = true
 vim.cmd [[colorscheme onedark]]
 
-
-
 require('lualine').setup {
   options = {
     icons_enabled = false,
@@ -182,6 +201,8 @@ vim.keymap.set('n', '<leader>F', builtin.live_grep)
 vim.keymap.set('n', '<leader>m', builtin.marks)
 
 
+
+
 require('gitsigns').setup {
   signs = {
     add = { text = '+' },
@@ -201,13 +222,123 @@ require('nvim-treesitter.configs').setup {
 }
 
 
--- Enable the following language servers
-local servers = { 'pyright', 'sumneko_lua', 'gopls' }
-local ok, _ = pcall(require, 'lspconfig')
+-- autopairs
+
+vim.g.AutoPairsCompatibleMaps = 0
+vim.g.AutoPairsMapBS = 1
+vim.g.AutoPairsMultilineBackspace = 1
+vim.g.AutoPairsFiletypeBlacklist = { 'TelescopePrompt' }
+
+-- https://github.com/LunarWatcher/auto-pairs/issues/34
+local au = vim.api.nvim_create_augroup('autopairs', { clear = true })
+vim.api.nvim_create_autocmd('Filetype', {
+  pattern = 'TelescopePrompt',
+  group = au,
+  callback = function() vim.b.autopairs_enabled = false end
+})
+
+-- cmp
+
+local ok, cmp = pcall(require, 'cmp')
 if not ok then
   return
 end
 
+-- cr/tab to exit when there are no matches
+local cmp_confirm = function(fallback)
+  if cmp.visible() and cmp.get_selected_entry() then
+    cmp.confirm()
+  else
+    fallback()
+  end
+end
+
+local ok, snippy = pcall(require, 'snippy')
+if not ok then
+  return
+end
+
+local ok, cmp_buffer = pcall(require, 'cmp_buffer')
+if not ok then
+  return
+end
+
+local kind_icons = {
+  Text = "",
+  Method = "m",
+  Function = "",
+  Constructor = "",
+  Field = "",
+  Variable = "",
+  Class = "",
+  Interface = "",
+  Module = "",
+  Property = "",
+  Unit = "",
+  Value = "",
+  Enum = "",
+  Keyword = "",
+  Snippet = "",
+  Color = "",
+  File = "",
+  Reference = "",
+  Folder = "",
+  EnumMember = "",
+  Constant = "",
+  Struct = "",
+  Event = "",
+  Operator = "",
+  TypeParameter = "",
+}
+
+cmp.setup({
+  snippet = {
+    expand = function(args) snippy.expand_snippet(args.body) end
+  },
+  mapping = cmp.mapping.preset.insert({
+    ['<C-d>'] = cmp.mapping.scroll_docs(-4, { 'i' }),
+    ['<C-f>'] = cmp.mapping.scroll_docs(4, { 'i' }),
+    ['<CR>'] = cmp.mapping(cmp_confirm, { 'i' }),
+    ['<TAB>'] = cmp.mapping(cmp_confirm, { 'i' }),
+  }),
+  sources = cmp.config.sources({
+    { name = 'nvim_lsp', keyword_length = 3, max_item_count = 10 },
+    { name = 'nvim_lsp_signature_help' },
+    { name = 'nvim_lua' },
+    { name = 'buffer' },
+    { name = 'path' },
+    { name = 'emoji' },
+  }),
+  sorting = {
+    comparators = {
+      cmp.config.compare.offset,
+      cmp.config.compare.exact,
+      cmp.config.compare.score,
+      cmp.config.compare.kind,
+      cmp.config.compare.sort_text,
+      cmp.config.compare.length,
+      cmp.config.compare.order,
+    }
+  },
+  formatting = {
+    fields = { 'kind', 'abbr', 'menu' },
+    format = function(entry, vim_item)
+      vim_item.kind = string.format("%s", kind_icons[vim_item.kind])
+      vim_item.menu = ({
+        nvim_lsp = "[LSP]",
+        nvim_lua = "[VIM]",
+        luasnip = "[Snippet]",
+        buffer = "[Buffer]",
+        path = "[Path]",
+      })[entry.source.name]
+      return vim_item
+    end,
+  }
+})
+
+
+-- Enable the following language servers
+local servers = { 'pyright', 'sumneko_lua', 'gopls' }
 
 local function lsp_keymap(bufnr)
   local opts = { noremap = true, silent = true, buffer = bufnr }
@@ -232,15 +363,70 @@ local function lsp_format(client, bufnr)
   end
 end
 
+vim.diagnostic.config({
+  virtual_text = true,
+  signs = { active = true },
+  update_in_insert = false,
+  underline = true,
+  severity_sort = true,
+  float = {
+    focusable = false,
+    style = 'minimal',
+    source = 'if_many',
+    header = 'a header',
+    prefix = 'a prefix',
+  }
+})
+
+
+local function lsp_diagnostics(bufnr)
+
+
+  vim.api.nvim_create_autocmd("CursorHold", {
+    buffer = bufnr,
+    callback = function()
+      local opts = {
+        focusable = false,
+        close_events = { "BufLeave", "CursorMoved", "InsertEnter", "FocusLost" },
+        border = 'rounded',
+        source = 'always',
+        prefix = ' ',
+        scope = 'cursor',
+      }
+      vim.diagnostic.open_float(nil, opts)
+    end
+  })
+end
+
 local function lsp_on_attach(client, bufnr)
   lsp_keymap(bufnr)
   lsp_format(client, bufnr)
+  lsp_diagnostics(bufnr)
 end
 
 local ok, installer = pcall(require, 'nvim-lsp-installer')
 if not ok then
   return
 end
+
+installer.setup({
+  ensure_installed = {
+    'bashls',
+    'eslint',
+    'gopls',
+    'jsonls',
+    'pyright',
+    'sumneko_lua',
+    'tsserver',
+  },
+  ui = {
+    icons = {
+      server_installed = "✓",
+      server_pending = "➜",
+      server_uninstalled = "✗"
+    }
+  },
+})
 
 local client_capabilities = vim.lsp.protocol.make_client_capabilities()
 
@@ -249,10 +435,11 @@ if ok then
   client_capabilities = cmp_lsp.update_capabilities(client_capabilities)
 end
 
-installer.on_server_ready(function(server)
+
+for _, server in ipairs(require 'nvim-lsp-installer'.get_installed_servers()) do
   local opts = {
     on_attach = lsp_on_attach,
-    capabilitities = client_capabilities
+    capabilities = client_capabilities
   }
 
   local ok, server_opts = pcall(require, "user.lsp.settings." .. server.name)
@@ -260,5 +447,6 @@ installer.on_server_ready(function(server)
     opts = vim.tbl_deep_extend("force", server_opts, opts)
   end
 
-  server:setup(opts)
-end)
+
+  require('lspconfig')[server.name].setup(opts)
+end
