@@ -67,55 +67,23 @@ packer.init({
 })
 
 packer.startup(function(use)
-  -- Package manager
   use 'wbthomason/packer.nvim'
-
-  -- Parsing library
   use 'nvim-treesitter/nvim-treesitter'
-  
-  -- Language server protocol: ide-like behavior
+  use 'nvim-treesitter/nvim-treesitter-textobjects'                               -- Additional textobjects for treesitter
   use 'neovim/nvim-lspconfig'
-  use 'williamboman/nvim-lsp-installer'
-
-  -- Adds indentation guides to all lines (including empty lines)
   use 'lukas-reineke/indent-blankline.nvim'
-
-  -- Atom-like theme
   use 'joshdick/onedark.vim'
-
-  -- Git decorations 
   use { 'lewis6991/gitsigns.nvim', requires = { 'nvim-lua/plenary.nvim' } }
-
-  -- Heuristically set shiftwidth / expandtab parameters for buffer
+  use 'neovim/nvim-lspconfig'
+  use 'williamboman/nvim-lsp-installer' 
   use 'tpope/vim-sleuth' 
+  use { 'hrsh7th/nvim-cmp', requires = { 'hrsh7th/cmp-nvim-lsp' } }               -- Autocompletion
 
-  -- Autocomplete
-  use { 'hrsh7th/nvim-cmp', requires = { 'hrsh7th/cmp-nvim-lsp' } }               
 
-  -- Search
-  use {
-    'nvim-telescope/telescope.nvim',
-    requires = {
-      'nvim-lua/plenary.nvim',
-      {
-        'nvim-telescope/telescope-fzf-native.nvim',
-        run = 'make',
-      }
-    }
-  }
 
-  -- Statusline
   use {
     'nvim-lualine/lualine.nvim',
     requires = { 'kyazdani42/nvim-web-devicons', opt = true }
-  }
-
-  -- File explorer
-  use {
-    'kyazdani42/nvim-tree.lua',
-    requires = {
-      'kyazdani42/nvim-web-devicons', -- optional, for file icons
-    }
   }
 
   if is_bootstrap then
@@ -152,23 +120,9 @@ require('lualine').setup {
   }
 }
 
-local ok, telescope = pcall(require, 'telescope')
-if not ok then
-  return
-end
 
-telescope.load_extension('fzf')
 
-require('nvim-tree').setup()
 
-vim.keymap.set('n', '<Leader>t', ':NvimTreeToggle<CR>')
-
-local builtin = require('telescope.builtin')
-vim.keymap.set('n', '<leader>b', builtin.buffers)
-vim.keymap.set('n', 'gr', builtin.lsp_references)
-vim.keymap.set('n', '<C-p>', builtin.git_files)
-vim.keymap.set('n', '<leader>F', builtin.live_grep)
-vim.keymap.set('n', '<leader>m', builtin.marks)
 
 
 require('gitsigns').setup {
