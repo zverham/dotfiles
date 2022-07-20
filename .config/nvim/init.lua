@@ -350,6 +350,7 @@ local function lsp_keymap(bufnr)
   vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
   vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
   vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
+  vim.keymap.set('n', 'Rn', vim.lsp.buf.rename, opts)
 end
 
 local function lsp_format(client, bufnr)
