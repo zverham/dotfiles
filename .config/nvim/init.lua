@@ -125,11 +125,11 @@ packer.startup(function(use)
   use {
     "quarto-dev/quarto-vim",
     requires = {
-      {"vim-pandoc/vim-pandoc-syntax"},
+      { "vim-pandoc/vim-pandoc-syntax" },
     },
-    ft = {"quarto"},
+    ft = { "quarto" },
   }
-  
+
   use {
     'hrsh7th/nvim-cmp',
     requires = {
@@ -465,5 +465,4 @@ for _, server in ipairs(require 'nvim-lsp-installer'.get_installed_servers()) do
 
 
   require('lspconfig')[server.name].setup(opts)
-end
 end
