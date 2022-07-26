@@ -121,6 +121,15 @@ packer.startup(function(use)
     }
   }
 
+
+  use {
+    "quarto-dev/quarto-vim",
+    requires = {
+      {"vim-pandoc/vim-pandoc-syntax"},
+    },
+    ft = {"quarto"},
+  }
+  
   use {
     'hrsh7th/nvim-cmp',
     requires = {
@@ -221,7 +230,7 @@ require('gitsigns').setup {
 
 require('nvim-treesitter.configs').setup {
   -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'lua', 'javascript', 'go', 'python' },
+  ensure_installed = { 'lua', 'javascript', 'go', 'python', 'markdown', 'yaml' },
   highlight = { enable = true },
   indent = { enable = true },
 }
@@ -424,6 +433,7 @@ installer.setup({
     'pyright',
     'sumneko_lua',
     'tsserver',
+    'marksman',
   },
   ui = {
     icons = {
@@ -455,4 +465,5 @@ for _, server in ipairs(require 'nvim-lsp-installer'.get_installed_servers()) do
 
 
   require('lspconfig')[server.name].setup(opts)
+end
 end
