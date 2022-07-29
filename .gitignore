@@ -1,0 +1,4 @@
+.DS_STORE
+.vim/undo
+.config/iterm2
+.config/nvim/plugin
